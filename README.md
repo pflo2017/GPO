@@ -1,61 +1,102 @@
-# GPO - Project Orchestrator
+# GPO - AI-Powered Project Orchestrator
 
-An AI-powered project orchestration system designed specifically for Language Service Providers (LSPs) to proactively identify and mitigate risks in translation projects.
+An intelligent project orchestration system designed specifically for Language Service Providers (LSPs) to proactively identify and mitigate risks in translation projects using advanced AI capabilities.
 
 ## 🎯 Overview
 
 GPO (Project Orchestrator) acts as an intelligent co-pilot for Project Managers in LSPs, providing:
 
-- **Dynamic Risk Assessment**: Flags projects for deadline, quality, resource, and sensitive data risks
-- **Proactive Recommendations**: Provides actionable insights to mitigate identified risks
+- **AI-Powered Risk Assessment**: Real-time analysis using Large Language Models (Gemini)
+- **Document Intelligence**: Advanced parsing and analysis of DOCX, PDF, and TXT files
+- **Proactive Recommendations**: Actionable insights to mitigate identified risks
+- **Sensitive Data Detection**: Automatic identification of PHI, PII, and confidential information
 - **Seamless Integration**: API-first module that integrates with existing Translation Management Systems
 - **Professional UI**: Clean, intuitive web interface for project management
 
-## 🚀 Features
+## 🚀 Key Features
 
 ### Core Functionality
-- **Real-time Risk Assessment**: Analyzes projects for multiple risk factors
-- **Intelligent Recommendations**: Provides specific action items for risk mitigation
-- **Project Dashboard**: Comprehensive overview of all projects and their risk status
-- **Linguist Management**: Track linguist capabilities and current workload
+- **Real-time AI Risk Assessment**: Analyzes projects using LLM for multiple risk factors
+- **Intelligent Document Analysis**: Parses and analyzes complex documents for content understanding
 - **Sensitive Content Detection**: Identifies medical, legal, and technical content requiring specialized expertise
+- **Predictive Deadline Management**: Analyzes time remaining vs. progress with AI insights
+- **Resource Optimization**: Evaluates workload and capacity with intelligent recommendations
+- **Quality Assurance**: Considers content type and linguist expertise for optimal assignments
 
-### Risk Assessment Logic
-- **Deadline Risk**: Analyzes time remaining vs. progress
-- **Quality Risk**: Considers content type and linguist expertise
-- **Resource Risk**: Evaluates workload and capacity
-- **Content Risk**: Flags sensitive documents requiring specialized handling
+### AI Capabilities
+- **Document Complexity Scoring**: AI-powered analysis of document readability and technical complexity
+- **Terminology Identification**: Automatic detection of specialized terms and jargon
+- **Risk Prioritization**: Intelligent ranking of risks (Sensitive Data > Deadline > Quality > Resource)
+- **Contextual Recommendations**: AI-generated actionable advice based on project context
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Flask (Python)
+- **Backend**: Flask (Python 3.10+)
 - **Database**: Supabase (PostgreSQL)
 - **ORM**: SQLAlchemy
+- **AI/ML**: Google Gemini (Large Language Model)
+- **Document Processing**: python-docx, PyMuPDF
 - **Frontend**: HTML + Tailwind CSS
+- **Production**: Docker, Gunicorn
 - **Data Generation**: Faker
 - **Environment**: python-dotenv
 
 ## 📋 Prerequisites
 
-- Python 3.8+
+- Python 3.10+
+- Docker (for production deployment)
 - Supabase account
+- Google Gemini API key
 - Git
 
-## 🚀 Installation & Setup
+## 🚀 Quick Start
 
-### 1. Clone and Setup Environment
+### Option 1: Docker Deployment (Recommended)
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd gpo_product
+
+# Build Docker image
+docker build -t gpo-product .
+
+# Run with environment variables
+docker run -p 5000:5000 \
+  -e SUPABASE_URL='your_supabase_url' \
+  -e SUPABASE_PASSWORD='your_supabase_password' \
+  -e SECRET_KEY='your_secret_key' \
+  -e LLM_API_KEY='your_gemini_api_key' \
+  gpo-product
+```
+
+### Option 2: Local Development
+
 ```bash
 # Navigate to project directory
 cd gpo_product
 
-# Activate virtual environment
-source venv/bin/activate
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Set environment variables
+export SUPABASE_URL='your_supabase_url'
+export SUPABASE_PASSWORD='your_supabase_password'
+export SECRET_KEY='your_secret_key'
+export LLM_API_KEY='your_gemini_api_key'
+
+# Run the application
+python app.py
 ```
 
-### 2. Database Setup
+The application will be available at `http://localhost:5000`
+
+## 🗄️ Database Setup
+
 1. Create a Supabase project at https://supabase.com/
 2. Run the following SQL commands in your Supabase SQL Editor:
 
@@ -96,44 +137,42 @@ ALTER TABLE linguists DISABLE ROW LEVEL SECURITY;
 ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the project root:
-```env
-SUPABASE_URL="your_supabase_project_url"
-SUPABASE_KEY="your_supabase_anon_key"
-SECRET_KEY="your_flask_secret_key"
-```
+## 📊 Usage Guide
 
-### 4. Run the Application
-```bash
-python app.py
-```
-
-The application will be available at `http://localhost:5000`
-
-## 📊 Usage
-
-### 1. Generate Dummy Data
+### 1. Generate Sample Data
 - Visit the home page
 - Click "Generate Dummy Data" to populate the database with sample projects and linguists
 - This creates 15 linguists and 25 projects with realistic data
 
-### 2. View Dashboard
-- Navigate to the dashboard to see all projects
-- View risk assessments and recommendations
-- Click "View Details" on any project for comprehensive information
+### 2. Create New Project
+- Navigate to "Create Project" from the dashboard
+- Fill in project details (client, name, language pair, content type, due date, word count)
+- Upload a source document (DOCX, PDF, or TXT)
+- The AI will automatically analyze the document and provide risk assessment
 
-### 3. Understanding Risk Levels
-- **High Risk**: Multiple risk factors detected, immediate action required
+### 3. View AI Analysis
+- The system automatically performs AI analysis on uploaded documents
+- View risk status, detailed reasoning, and actionable recommendations
+- Run additional analysis on existing projects using the "Run GPO Analysis" button
+
+### 4. Understanding Risk Levels
+- **Critical Risk**: Sensitive data detected, immediate action required
+- **High Risk**: Multiple risk factors detected, urgent attention needed
 - **Medium Risk**: Some concerns identified, monitoring recommended
 - **Low Risk**: Minor issues detected, standard procedures sufficient
-- **None**: No significant risks identified
+- **On Track**: No significant risks identified
 
-## 🔧 API Endpoints
+## 🔧 Environment Variables
 
-- `GET /` - Home page
-- `GET /dashboard` - Project dashboard
-- `GET /generate-dummy-data` - Generate sample data
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SUPABASE_URL` | Your Supabase project URL | Yes |
+| `SUPABASE_PASSWORD` | Database password | Yes |
+| `SECRET_KEY` | Flask secret key | Yes |
+| `LLM_API_KEY` | Google Gemini API key | Yes |
+| `FLASK_ENV` | Environment (production/development) | No |
+| `SUPABASE_HOST` | Database host (default: auto) | No |
+| `SUPABASE_PORT` | Database port (default: 6543) | No |
 
 ## 📁 Project Structure
 
@@ -141,55 +180,74 @@ The application will be available at `http://localhost:5000`
 gpo_product/
 ├── app.py                 # Main Flask application
 ├── requirements.txt       # Python dependencies
-├── .env                  # Environment variables
+├── Dockerfile            # Docker configuration
+├── start.sh              # Production startup script
+├── .env                  # Environment variables (create this)
 ├── .gitignore           # Git ignore rules
-├── README.md            # Project documentation
+├── README.md            # This file
+├── DEPLOYMENT.md        # Deployment guide
+├── API.md               # API documentation
+├── COMPLIANCE.md        # Compliance overview
+├── DEMO_SCRIPT.md       # Sales demo script
 ├── templates/           # HTML templates
 │   ├── index.html       # Home page
-│   └── dashboard.html   # Dashboard page
+│   ├── dashboard.html   # Dashboard page
+│   ├── create_project.html
+│   ├── project_detail.html
+│   ├── 404.html         # Error pages
+│   └── 500.html
 └── dummy_docs/          # Sample documents
-    ├── sample_medical_document.txt
-    ├── sample_legal_contract.txt
-    └── sample_technical_manual.txt
+    └── .gitkeep
 ```
 
-## 🎯 GPO Risk Assessment Logic
+## 🎯 AI Risk Assessment Logic
 
-The system evaluates projects based on:
+The system evaluates projects using advanced AI analysis:
 
-1. **Deadline Analysis**
-   - Days remaining vs. progress percentage
-   - Daily word count requirements
+1. **Document Analysis**
+   - Complexity scoring and readability assessment
+   - Sensitive data detection (PHI, PII, confidential information)
+   - Specialized terminology identification
 
-2. **Content Type Assessment**
-   - Medical/Legal content requiring specialized expertise
-   - Technical documentation complexity
+2. **Project Assessment**
+   - Deadline analysis with AI-powered predictions
+   - Quality risk evaluation based on content and linguist expertise
+   - Resource optimization and workload distribution
+   - Contextual recommendation generation
 
-3. **Resource Evaluation**
-   - Linguist availability and expertise
-   - Current workload distribution
-
-4. **Quality Considerations**
-   - Linguist quality scores
-   - Content sensitivity requirements
+3. **Risk Prioritization**
+   - Sensitive Data (highest priority)
+   - Deadline Management
+   - Quality Assurance
+   - Resource Allocation
+   - Terminology Management
 
 ## 🔮 Future Enhancements
 
-- **Real AI Integration**: Replace rule-based logic with ML models
+- **Advanced AI Models**: Integration with specialized translation AI models
 - **API Endpoints**: RESTful API for TMS integration
 - **Advanced Analytics**: Predictive modeling and trend analysis
 - **Multi-language Support**: Interface localization
 - **Real-time Notifications**: Email/SMS alerts for high-risk projects
 - **Advanced Reporting**: Custom reports and analytics
+- **Machine Learning**: Continuous learning from project outcomes
 
 ## 🤝 Contributing
 
-This is a demonstration project for the GPO concept. For production use, additional security, testing, and deployment considerations would be required.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📞 Support
+
+For support, email support@gpo-product.com or create an issue in the repository.
 
 ## 📄 License
 
-This project is for demonstration purposes. All rights reserved.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
-**GPO - Transforming reactive project management into proactive orchestration** 🚀 
+**GPO - Empowering LSPs with AI-Driven Project Intelligence** 

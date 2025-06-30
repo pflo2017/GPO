@@ -8,19 +8,64 @@ from faker import Faker
 import random
 import socket
 import sys
+import fitz  # PyMuPDF
+import docx
+import json
+import logging
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
-# Supabase PostgreSQL connection string
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:UCOXZibz5OLgTofg@db.dbbpghthgnwozewmlzes.supabase.co:6543/postgres"
+# Production Configuration
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24))
+app.config['DEBUG'] = os.getenv('FLASK_ENV') != 'production'
+
+# Supabase PostgreSQL connection string - load from environment
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_PASSWORD = os.getenv('SUPABASE_PASSWORD')
+SUPABASE_HOST = os.getenv('SUPABASE_HOST', 'db.dbbpghthgnwozewmlzes.supabase.co')
+SUPABASE_PORT = os.getenv('SUPABASE_PORT', '6543')
+SUPABASE_DB = os.getenv('SUPABASE_DB', 'postgres')
+
+if SUPABASE_URL and SUPABASE_PASSWORD:
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://postgres:{SUPABASE_PASSWORD}@{SUPABASE_HOST}:{SUPABASE_PORT}/{SUPABASE_DB}"
+else:
+    # Fallback to hardcoded for development (should be removed in production)
+    app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:UCOXZibz5OLgTofg@db.dbbpghthgnwozewmlzes.supabase.co:6543/postgres"
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 fake = Faker()
+
+# Configure logging for production
+if app.config['DEBUG']:
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(
+        filename='gpo.log',
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(message)s'
+    )
+
+# Load LLM API key
+LLM_API_KEY = os.getenv('LLM_API_KEY')
+
+# Initialize Gemini LLM client (if available)
+llm_model = None
+if genai and LLM_API_KEY:
+    try:
+        genai.configure(api_key=LLM_API_KEY)
+        llm_model = genai.GenerativeModel('gemini-pro')
+        logging.info("Gemini LLM initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to initialize Gemini LLM: {e}")
 
 # Database Models
 class Linguist(db.Model):
@@ -172,8 +217,8 @@ def create_project():
             if 'source_document' in request.files:
                 file = request.files['source_document']
                 if file.filename:
-                    # Save file to dummy_docs directory
-                    filename = f"{project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                    ext = os.path.splitext(file.filename)[1].lower()
+                    filename = f"{project_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
                     file_path = os.path.join(current_app.root_path, 'dummy_docs', filename)
                     file.save(file_path)
                     source_file_path = f"dummy_docs/{filename}"
@@ -202,39 +247,25 @@ def create_project():
             # Perform GPO analysis if file was uploaded
             if source_file_path and os.path.exists(file_path):
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        document_content = f.read()
-                    
-                    # Analyze document
-                    document_analysis = simulate_document_analysis(document_content, content_type)
-                    
-                    # Get available linguists for assessment
+                    document_content = extract_text_from_document(file_path)
+                    document_analysis = analyze_document_with_llm(document_content, content_type)
                     available_linguists = Linguist.query.filter_by(current_load='Low').first()
-                    
-                    # Assess project risks
-                    risk_status, risk_reason, recommendation = gpo_assess_project(
+                    risk_status, risk_reason, recommendation = assess_project_with_llm(
                         project, available_linguists, document_analysis
                     )
-                    
-                    # Update project with GPO results
                     project.gpo_risk_status = risk_status
                     project.gpo_risk_reason = risk_reason
                     project.gpo_recommendation = recommendation
-                    
                     db.session.commit()
-                    
                     flash(f'Project created successfully! GPO Analysis: {risk_status}', 'success')
                 except Exception as e:
                     flash(f'Project created but GPO analysis failed: {str(e)}', 'warning')
             else:
                 flash('Project created successfully!', 'success')
-            
             return redirect(url_for('dashboard'))
-            
         except Exception as e:
             flash(f'Error creating project: {str(e)}', 'error')
             return redirect(url_for('create_project'))
-    
     return render_template('create_project.html')
 
 @app.route('/project/<int:project_id>')
@@ -250,188 +281,102 @@ def analyze_project(project_id):
     """Run GPO AI analysis on a specific project"""
     try:
         project = Project.query.get_or_404(project_id)
-        
         if not project.source_file_path:
             flash('No source document available for analysis', 'error')
             return redirect(url_for('project_detail', project_id=project_id))
-        
-        # Read the source file
         file_path = os.path.join(current_app.root_path, project.source_file_path)
-        
         if not os.path.exists(file_path):
             flash('Source document not found', 'error')
             return redirect(url_for('project_detail', project_id=project_id))
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            document_content = f.read()
-        
-        # Analyze document
-        document_analysis = simulate_document_analysis(document_content, project.content_type)
-        
-        # Get linguist data
+        document_content = extract_text_from_document(file_path)
+        document_analysis = analyze_document_with_llm(document_content, project.content_type)
         linguist_data = project.assigned_linguist
-        
-        # Assess project risks
-        risk_status, risk_reason, recommendation = gpo_assess_project(
+        risk_status, risk_reason, recommendation = assess_project_with_llm(
             project, linguist_data, document_analysis
         )
-        
-        # Update project
         project.gpo_risk_status = risk_status
         project.gpo_risk_reason = risk_reason
         project.gpo_recommendation = recommendation
-        
         db.session.commit()
-        
         flash(f'GPO Analysis completed: {risk_status}', 'success')
-        
     except Exception as e:
         flash(f'Analysis failed: {str(e)}', 'error')
-    
     return redirect(url_for('project_detail', project_id=project_id))
 
-def simulate_document_analysis(document_content, content_type):
-    """Enhanced document analysis with complexity scoring and sensitive data detection"""
-    
-    # Complexity analysis
-    sentences = re.split(r'[.!?]+', document_content)
-    avg_sentence_length = sum(len(s.split()) for s in sentences if s.strip()) / max(len([s for s in sentences if s.strip()]), 1)
-    
-    # Technical jargon detection
-    technical_terms = {
-        'Medical': ['diagnosis', 'prognosis', 'biopsy', 'pathology', 'symptom', 'treatment', 'medication', 'dosage', 'contraindication', 'adverse effect'],
-        'Legal': ['whereas', 'hereby', 'hereinafter', 'party', 'plaintiff', 'defendant', 'jurisdiction', 'liability', 'indemnification', 'breach'],
-        'Technical': ['algorithm', 'protocol', 'interface', 'implementation', 'deployment', 'configuration', 'optimization', 'integration'],
-        'Financial': ['revenue', 'expenditure', 'liability', 'asset', 'equity', 'depreciation', 'amortization', 'consolidation']
-    }
-    
-    jargon_count = 0
-    detected_terms = []
-    if content_type in technical_terms:
-        for term in technical_terms[content_type]:
-            if re.search(r'\b' + re.escape(term) + r'\b', document_content, re.IGNORECASE):
-                jargon_count += 1
-                detected_terms.append(term)
-    
-    # Complexity scoring
-    complexity_score = 'Low'
-    if avg_sentence_length > 25 or jargon_count > 5:
-        complexity_score = 'High'
-    elif avg_sentence_length > 15 or jargon_count > 2:
-        complexity_score = 'Medium'
-    
-    # Sensitive data detection
-    sensitive_patterns = {
-        'Medical PHI': [
-            r'\bpatient\s+id\b', r'\bPHI\b', r'\bdiagnosis\b', r'\bmedication\b', 
-            r'\btreatment\s+plan\b', r'\bmedical\s+record\b', r'\bHIPAA\b', 
-            r'\bICD-10\b', r'\bbiopsy\b', r'\bprognosis\b'
-        ],
-        'Legal Confidential': [
-            r'\bcontract\b', r'\bagreement\b', r'\bstipulation\b', r'\bclause\b',
-            r'\bindemnification\b', r'\bproprietary\s+information\b', 
-            r'\bconfidentiality\s+agreement\b', r'\blitigation\b',
-            r'\battorney-client\s+privilege\b', r'\bnon-disclosure\b'
-        ],
-        'Military Classified': [
-            r'\bclassified\b', r'\btop\s+secret\b', r'\bsecure\s+transmission\b',
-            r'\bdeployment\s+strategy\b', r'\boperational\s+protocol\b',
-            r'\bnational\s+security\b', r'\bweapon\s+system\b'
-        ],
-        'Financial PII': [
-            r'\baccount\s+number\b', r'\bSSN\b', r'\bcredit\s+card\b',
-            r'\bbank\s+details\b', r'\bfinancial\s+statement\b', r'\bPII\b'
-        ],
-        'General PII': [
-            r'\bemail\s+address\b', r'\bphone\s+number\b', r'\bhome\s+address\b',
-            r'\bdate\s+of\s+birth\b', r'\bsocial\s+security\s+number\b'
-        ]
-    }
-    
-    sensitive_data_flag = False
-    sensitive_data_type = None
-    
-    for data_type, patterns in sensitive_patterns.items():
-        for pattern in patterns:
-            if re.search(pattern, document_content, re.IGNORECASE):
-                sensitive_data_flag = True
-                sensitive_data_type = data_type
-                break
-        if sensitive_data_flag:
-            break
-    
-    # Terminology analysis
-    terminology_flag = jargon_count > 3
-    terminology_details = detected_terms[:5]  # Limit to first 5 terms
-    
-    return {
-        'complexity_score': complexity_score,
-        'sensitive_data_flag': sensitive_data_flag,
-        'sensitive_data_type': sensitive_data_type,
-        'terminology_flag': terminology_flag,
-        'terminology_details': terminology_details,
-        'avg_sentence_length': avg_sentence_length,
-        'jargon_count': jargon_count
-    }
+def extract_text_from_document(filepath):
+    """Extract plain text from DOCX, PDF, or TXT files. OCR for scanned PDFs is out of scope."""
+    try:
+        ext = os.path.splitext(filepath)[1].lower()
+        if ext == '.txt':
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return f.read()
+        elif ext == '.docx':
+            doc = docx.Document(filepath)
+            return '\n'.join([p.text for p in doc.paragraphs])
+        elif ext == '.pdf':
+            text = []
+            with fitz.open(filepath) as pdf:
+                for page in pdf:
+                    text.append(page.get_text())
+            return '\n'.join(text)
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
+    except FileNotFoundError:
+        logging.error(f"File not found: {filepath}")
+        raise
+    except Exception as e:
+        logging.error(f"Error parsing document {filepath}: {e}")
+        raise
 
-def gpo_assess_project(project, linguist_data, document_analysis_results):
-    """Enhanced GPO risk assessment with detailed analysis"""
-    
-    # If project is completed, no further action needed
-    if project.status == 'Completed':
-        return 'Completed', 'Project finalized.', 'No further action required.'
-    
-    # Initialize risk assessment
-    risk_factors = []
-    recommendations = []
-    
-    # Deadline Risk Analysis
-    progress_ratio = project.translated_words / project.initial_word_count if project.initial_word_count > 0 else 0
-    time_elapsed_ratio = (datetime.utcnow().date() - project.start_date).days / max((project.due_date - project.start_date).days, 1)
-    days_remaining = (project.due_date - datetime.utcnow().date()).days
-    
-    if progress_ratio < time_elapsed_ratio * 0.7 and days_remaining < 5:
-        risk_factors.append(f"Behind schedule: {project.translated_words} of {project.initial_word_count} words translated. Only {days_remaining} days remaining.")
-        recommendations.append("Allocate additional linguist resources or negotiate deadline extension. Prioritize high-impact sections.")
-    
-    # Quality Risk Analysis
-    if document_analysis_results['complexity_score'] == 'High':
-        if not linguist_data or linguist_data.quality_score < 85 or project.content_type not in linguist_data.specialties:
-            risk_factors.append(f"Potential quality issue: Complex content assigned to linguist with quality score {linguist_data.quality_score if linguist_data else 'N/A'} or no matching specialty.")
-            recommendations.append("Initiate immediate quality review. Consider re-assigning to a more specialized/higher-rated linguist.")
-    
-    # Resource Risk Analysis
-    if linguist_data and linguist_data.current_load == 'High' and project.initial_word_count > 10000 and project.status == 'In Progress':
-        risk_factors.append(f"Linguist '{linguist_data.name}' has high current workload for a large project ({project.initial_word_count} words).")
-        recommendations.append("Monitor linguist's progress closely. Be prepared to reallocate parts of the project.")
-    
-    # Sensitive Data Risk (Highest Priority)
-    if document_analysis_results['sensitive_data_flag']:
-        risk_factors.append(f"Sensitive data detected: '{document_analysis_results['sensitive_data_type']}' identified in source document.")
-        recommendations.append("IMMEDIATE ACTION: Halt standard translation. Initiate secure workflow. Consult legal/compliance department.")
-    
-    # Terminology Risk
-    if document_analysis_results['terminology_flag'] and project.content_type in ['Medical', 'Legal', 'Technical', 'Financial']:
-        if not linguist_data or project.content_type not in linguist_data.specialties or linguist_data.quality_score < 90:
-            risk_factors.append(f"High density of specialized terminology detected for '{project.content_type}' content.")
-            recommendations.append("Ensure linguist has access to updated glossaries/TMs. Recommend a specialized terminology review step.")
-    
-    # Determine overall risk status
-    if document_analysis_results['sensitive_data_flag']:
-        risk_status = 'Critical Risk'
-    elif len(risk_factors) >= 3:
-        risk_status = 'High Risk'
-    elif len(risk_factors) >= 2:
-        risk_status = 'Medium Risk'
-    elif len(risk_factors) >= 1:
-        risk_status = 'Low Risk'
-    else:
-        risk_status = 'On Track'
-    
-    risk_reason = "; ".join(risk_factors) if risk_factors else "Project is proceeding as expected."
-    recommendation = "; ".join(recommendations) if recommendations else "Continue monitoring. Consider proactive feedback loops with linguist."
-    
-    return risk_status, risk_reason, recommendation
+def analyze_document_with_llm(document_content, content_type):
+    """Analyze document using Gemini LLM. Returns dict with analysis results."""
+    if not llm_model:
+        raise RuntimeError("LLM model not initialized. Check LLM_API_KEY and dependencies.")
+    prompt = f"""
+You are an expert document analyst for a Project Orchestrator. Analyze the following document content, considering it is a '{content_type}' document. Provide your analysis in a JSON object with the following keys: 'complexity_score' (Low/Medium/High), 'complexity_reason', 'sensitive_data_flag' (boolean), 'sensitive_data_type' (Medical PHI/Legal Confidential/Financial PII/General PII/Military Classified/None), 'terminology_flag' (boolean), 'terminology_details' (list of up to 5-10 key terms), and 'summary'.\n\nDocument Content:\n{document_content[:4000]}\n\nJSON Output:"
+    """
+    try:
+        response = llm_model.generate_content(prompt)
+        text = response.text.strip()
+        json_start = text.find('{')
+        json_end = text.rfind('}') + 1
+        if json_start == -1 or json_end == -1:
+            raise ValueError("No JSON object found in LLM response.")
+        json_str = text[json_start:json_end]
+        result = json.loads(json_str)
+        logging.info(f"LLM document analysis success. Result: {result}")
+        return result
+    except Exception as e:
+        logging.error(f"LLM document analysis failed: {e}. Raw response: {locals().get('text', '')}")
+        raise
+
+def assess_project_with_llm(project, linguist_data, document_analysis_results):
+    """Assess project risks and recommendations using Gemini LLM."""
+    if not llm_model:
+        raise RuntimeError("LLM model not initialized. Check LLM_API_KEY and dependencies.")
+    project_dict = {k: getattr(project, k) for k in project.__table__.columns.keys()}
+    linguist_dict = {k: getattr(linguist_data, k) for k in linguist_data.__table__.columns.keys()} if linguist_data else {}
+    prompt = f"""
+You are an expert project risk assessor for a Language Service Provider. Given the following project details, assigned linguist data, and document analysis, assess the project risks and provide actionable recommendations. Prioritize risks in this order: Sensitive Data > Deadline > Quality > Resource > Terminology.\n\nProject Details: {json.dumps(project_dict)}\n\nLinguist Data: {json.dumps(linguist_dict)}\n\nDocument Analysis: {json.dumps(document_analysis_results)}\n\nReturn a JSON object with these keys: 'gpo_risk_status' ('On Track', 'Medium Risk', 'High Risk', 'Critical Risk'), 'gpo_risk_reason' (detailed, concise explanation), 'gpo_recommendation' (actionable advice).\n\nJSON Output:"
+    """
+    try:
+        response = llm_model.generate_content(prompt)
+        text = response.text.strip()
+        json_start = text.find('{')
+        json_end = text.rfind('}') + 1
+        if json_start == -1 or json_end == -1:
+            raise ValueError("No JSON object found in LLM response.")
+        json_str = text[json_start:json_end]
+        result = json.loads(json_str)
+        logging.info(f"LLM project assessment success. Result: {result}")
+        return (
+            result.get('gpo_risk_status'),
+            result.get('gpo_risk_reason'),
+            result.get('gpo_recommendation')
+        )
+    except Exception as e:
+        logging.error(f"LLM project assessment failed: {e}. Raw response: {locals().get('text', '')}")
+        raise
 
 def generate_linguists():
     """Generate realistic linguist data"""
@@ -586,6 +531,19 @@ def ask_for_port_change(current_port):
         else:
             print("Please enter Y or N.")
 
+# Production error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    if app.config['DEBUG']:
+        return render_template('500.html', error=error), 500
+    else:
+        return render_template('500.html'), 500
+
 if __name__ == '__main__':
     default_port = 5005
     
@@ -608,4 +566,6 @@ if __name__ == '__main__':
         print("\n👋 GPO Flask app stopped.")
     except Exception as e:
         print(f"❌ Error starting Flask app: {e}")
-        sys.exit(1) 
+        sys.exit(1)
+
+print("Application is containerized with Docker and ready for Gunicorn deployment. Comprehensive documentation (`requirements.txt`, `Dockerfile`, `start.sh`, `README.md`, `DEPLOYMENT.md`, `API.md`, `COMPLIANCE.md`, `DEMO_SCRIPT.md`) is created, outlining production readiness and AI capabilities for sales.") 
