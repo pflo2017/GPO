@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Management - GPO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#64748b',
+                        success: '#059669',
+                        warning: '#d97706',
+                        danger: '#dc2626'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="flex flex-col min-h-screen">
+        <!-- Header/Navigation -->
+        <header class="bg-white shadow-md">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-primary">GPO</h1>
+                </div>
+                <nav>
+                    <ul class="flex space-x-6">
+                        <li><a href="{{ url_for('dashboard') }}" class="text-gray-600 hover:text-primary">Dashboard</a></li>
+                        <li><a href="{{ url_for('new_project_request') }}" class="text-gray-600 hover:text-primary">New Project</a></li>
+                        <li><a href="{{ url_for('auth.profile') }}" class="text-gray-600 hover:text-primary">Profile</a></li>
+                        <li><a href="{{ url_for('auth.logout') }}" class="text-gray-600 hover:text-primary">Logout</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow container mx-auto px-4 py-8">
+            <div class="max-w-6xl mx-auto">
+                <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+                    <div class="p-6 bg-primary text-white">
+                        <h2 class="text-2xl font-bold">Subscription Management</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="mb-4 p-4 rounded-md {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                                        {{ message }}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
+                        <div class="mb-8">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Current Subscription</h3>
+                            <div class="bg-gray-50 p-4 rounded-md">
+                                <p class="text-gray-600 mb-4">
+                                    Your organization is currently on the <span class="font-medium capitalize">{{ current_plan or 'Free' }}</span> plan.
+                                </p>
+                                <p class="text-gray-600">
+                                    {% if organization and organization.subscription_end_date %}
+                                    Subscription renews on <span class="font-medium">{{ organization.subscription_end_date.strftime('%B %d, %Y') }}</span>.
+                                    {% else %}
+                                    Subscription renewal date not set.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">Available Plans</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {% for plan in plans %}
+                        <div class="bg-white rounded-lg shadow-md overflow-hidden border {% if current_plan == plan.id %}border-primary{% else %}border-transparent{% endif %}">
+                            <div class="p-6 {% if current_plan == plan.id %}bg-primary text-white{% else %}bg-gray-50{% endif %}">
+                                <h4 class="text-lg font-bold mb-2">{{ plan.name }}</h4>
+                                <div class="flex items-baseline">
+                                    <span class="text-2xl font-bold">${{ plan.price }}</span>
+                                    <span class="text-sm ml-1">/month</span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6">
+                                <ul class="space-y-3">
+                                    {% for feature in plan.features %}
+                                    <li class="flex items-start">
+                                        <svg class="h-5 w-5 text-success flex-shrink-0 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span class="text-gray-600 text-sm">{{ feature }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                
+                                <div class="mt-6">
+                                    <p class="text-sm text-gray-500 mb-2">
+                                        <span class="font-medium">{{ plan.max_users }}</span> users, 
+                                        <span class="font-medium">{{ plan.max_projects }}</span> projects
+                                    </p>
+                                    
+                                    {% if current_plan == plan.id %}
+                                    <button disabled class="w-full px-4 py-2 bg-gray-300 text-gray-600 rounded-md cursor-not-allowed">
+                                        Current Plan
+                                    </button>
+                                    {% else %}
+                                    <form method="POST" action="{{ url_for('admin.subscription') }}">
+                                        <input type="hidden" name="tier" value="{{ plan.id }}">
+                                        <button type="submit" class="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800">
+                                            {% if plan.price > 0 %}Upgrade{% else %}Downgrade{% endif %}
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+                    <div class="p-6 bg-gray-50">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Payment Information</h3>
+                        <p class="text-gray-600 mb-4">
+                            This is a demo version. In a production environment, this section would include:
+                        </p>
+                        <ul class="list-disc pl-6 text-gray-600 mb-4">
+                            <li>Credit card management</li>
+                            <li>Billing address information</li>
+                            <li>Invoice history</li>
+                            <li>Payment method options</li>
+                        </ul>
+                        <p class="text-gray-600">
+                            For the demo, all subscription changes are simulated without actual payments.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mt-8">
+                    <a href="{{ url_for('admin.organization_settings') }}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+                        Back to Organization Settings
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white shadow-inner mt-8">
+            <div class="container mx-auto px-4 py-6">
+                <p class="text-center text-gray-500 text-sm">
+                    &copy; {{ current_year }} GPO - AI-Powered Project Orchestrator. All rights reserved.
+                </p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html> 

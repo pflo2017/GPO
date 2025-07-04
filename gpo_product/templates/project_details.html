@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.project_name }} - Project Details - GPO{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">{{ project.project_name }}</h1>
+                    <p class="text-gray-600 mt-2">Client: {{ project.client_name }}</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{{ url_for('dashboard') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg">
+                        Back to Dashboard
+                    </a>
+                    <a href="{{ url_for('new_project_request') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        New Project
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-sm border">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Project Details</h3>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Language Pair:</span>
+                        <p class="text-gray-900">{{ project.source_lang }} → {{ project.target_lang }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Content Type:</span>
+                        <p class="text-gray-900">{{ project.content_type }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Desired Deadline:</span>
+                        <p class="text-gray-900">{{ project.desired_deadline.strftime('%B %d, %Y') if project.desired_deadline else 'Not set' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Created:</span>
+                        <p class="text-gray-900">{{ project.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Analysis Status</h3>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Status:</span>
+                        {% if project.local_analysis_status == 'Pending Local Analysis' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-yellow-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Pending Analysis
+                        </span>
+                        {% elif project.local_analysis_status == 'Analysis Complete' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Analysis Complete
+                        </span>
+                        {% elif project.local_analysis_status == 'Error in Local Analysis' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            ✗ Analysis Error
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {{ project.local_analysis_status }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if project.ai_analysis_timestamp %}
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Analysis Time:</span>
+                        <p class="text-gray-900">{{ project.ai_analysis_timestamp.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+                <div class="space-y-3">
+                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        Download Report
+                    </button>
+                    <button class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                        Start Project
+                    </button>
+                    <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">
+                        Share Results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Blueprint Section -->
+        {% if project.local_analysis_status == 'Analysis Complete' %}
+        <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+                <h2 class="text-2xl font-bold text-white">God PM Blueprint</h2>
+                <p class="text-blue-100 mt-1">AI-powered project intelligence and strategic recommendations</p>
+            </div>
+
+            <div class="p-6">
+                <!-- Risk Assessment -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Risk Assessment</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <span class="text-sm font-medium text-gray-500">Overall Risk Status:</span>
+                            {% if project.ai_overall_risk_status == 'Critical' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 ml-2">
+                                🔴 Critical Risk
+                            </span>
+                            {% elif project.ai_overall_risk_status == 'High' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 ml-2">
+                                🟠 High Risk
+                            </span>
+                            {% elif project.ai_overall_risk_status == 'Medium' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 ml-2">
+                                🟡 Medium Risk
+                            </span>
+                            {% elif project.ai_overall_risk_status == 'Low' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 ml-2">
+                                🟢 Low Risk
+                            </span>
+                            {% elif project.ai_overall_risk_status == 'On Track' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 ml-2">
+                                🔵 On Track
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="text-sm font-medium text-gray-500">Document Complexity:</span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 ml-2">
+                                {{ project.ai_document_complexity or 'Not assessed' }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if project.ai_risk_reason %}
+                    <div class="mt-4">
+                        <span class="text-sm font-medium text-gray-500">Risk Reason:</span>
+                        <p class="text-gray-900 mt-1">{{ project.ai_risk_reason }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Key Challenges -->
+                {% if project.ai_key_challenges %}
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Key Challenges</h3>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <p class="text-gray-900">{{ project.ai_key_challenges }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Sensitive Data Alert -->
+                {% if project.ai_sensitive_data_alert_summary %}
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Sensitive Data Alert</h3>
+                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-400">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-red-700">{{ project.ai_sensitive_data_alert_summary }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Recommendations Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Team Recommendations -->
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h4 class="text-lg font-medium text-gray-900 mb-4">Team & Resource Recommendations</h4>
+                        <div class="space-y-3">
+                            {% if project.ai_recommended_linguist_profile_text %}
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Recommended Linguist Profile:</span>
+                                <p class="text-gray-900 mt-1">{{ project.ai_recommended_linguist_profile_text }}</p>
+                            </div>
+                            {% endif %}
+                            {% if project.ai_optimal_team_size %}
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Optimal Team Size:</span>
+                                <p class="text-gray-900 mt-1">{{ project.ai_optimal_team_size }} linguist(s)</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Timeline Assessment -->
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h4 class="text-lg font-medium text-gray-900 mb-4">Timeline Assessment</h4>
+                        {% if project.ai_deadline_fit_assessment %}
+                        <p class="text-gray-900">{{ project.ai_deadline_fit_assessment }}</p>
+                        {% else %}
+                        <p class="text-gray-500">No timeline assessment available</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Strategic Recommendations -->
+                {% if project.ai_strategic_recommendations %}
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <div class="prose prose-blue max-w-none">
+                            <p class="text-gray-900">{{ project.ai_strategic_recommendations }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% elif project.local_analysis_status == 'Pending Local Analysis' %}
+        <div class="bg-white rounded-lg shadow-sm border p-12 text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-6"></div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Analysis in Progress</h3>
+            <p class="text-gray-600 mb-4">The GPO Local Brain is analyzing your project documents.</p>
+            <p class="text-sm text-gray-500">This may take a few minutes depending on document size and complexity.</p>
+            <button onclick="location.reload()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                Refresh Page
+            </button>
+        </div>
+        {% elif project.local_analysis_status == 'Error in Local Analysis' %}
+        <div class="bg-white rounded-lg shadow-sm border p-12 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Analysis Error</h3>
+            <p class="text-gray-600 mb-4">There was an error during the local analysis process.</p>
+            <p class="text-sm text-gray-500">Please check your GPO Local Brain configuration and try again.</p>
+            <button onclick="location.reload()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                Retry Analysis
+            </button>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow-sm border p-12 text-center">
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">No Analysis Data</h3>
+            <p class="text-gray-600">Analysis has not been initiated for this project yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

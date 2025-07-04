@@ -1,0 +1,34 @@
+# Commands to run on the DigitalOcean droplet after uploading files
+
+# Build Docker image
+cd /opt/gpo
+docker build -t gpo-app .
+
+# Run the container
+docker run -d --name gpo-app --restart unless-stopped -p 80:5000 --env-file .env gpo-app
+
+# Check if the application is running
+curl http://localhost:80/
+
+# Install and configure Nginx
+apt update && apt install -y nginx
+
+# Create Nginx configuration (replace YOUR_DROPLET_IP with your actual IP)
+cat > /etc/nginx/sites-available/gpo << 'NGINX_CONFIG'
+server {
+    listen 80;
+    server_name YOUR_DROPLET_IP;
+    
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+NGINX_CONFIG
+
+# Enable the site and reload Nginx
+ln -sf /etc/nginx/sites-available/gpo /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx

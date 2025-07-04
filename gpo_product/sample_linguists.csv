@@ -1,0 +1,6 @@
+internal_id,full_name,email,source_languages,target_languages,specializations,quality_rating,general_capacity_words_per_day,status
+L-001,John Doe,john.doe@example.com,EN FR,ES DE,Medical Pharma,Certified,2500,Active
+L-002,Jane Smith,jane.smith@example.com,EN,FR,Legal,Preferred,2000,Active
+L-003,Mike Johnson,,EN,IT,Technical,Standard,1800,Inactive
+L-004,Sarah Wilson,sarah.wilson@example.com,EN DE,FR ES,Marketing,Preferred,2200,Active
+L-005,David Brown,david.brown@example.com,EN,PT,Finance,Native Speaker,3000,Active 

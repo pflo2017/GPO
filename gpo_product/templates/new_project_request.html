@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Project Analysis Request - GPO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#64748b',
+                        success: '#059669',
+                        warning: '#d97706',
+                        danger: '#dc2626'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <a href="/dashboard" class="flex items-center">
+                            <h1 class="text-2xl font-bold text-primary">GPO</h1>
+                            <span class="ml-2 text-sm text-gray-600 hidden sm:block">Project Orchestrator</span>
+                        </a>
+                    </div>
+                    <nav class="flex space-x-8">
+                        <a href="/dashboard" class="text-gray-600 hover:text-primary px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="/new_project_request" class="text-primary px-3 py-2 rounded-md text-sm font-medium">New Project</a>
+                        <a href="/linguists" class="text-gray-600 hover:text-primary px-3 py-2 rounded-md text-sm font-medium">Linguists</a>
+                        <a href="/analytics" class="text-gray-600 hover:text-primary px-3 py-2 rounded-md text-sm font-medium">Analytics</a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            <div class="container mx-auto px-4 py-8" id="new-project-form">
+                <div class="max-w-3xl mx-auto">
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">New Project Analysis Request</h1>
+                        <p class="text-gray-600 mt-2">Initiate a new project analysis request for AI-powered intelligence</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm border">
+                        <form method="POST" class="space-y-6" id="project-form">
+                            {{ form.hidden_tag() }}
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.project_name.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Project Name *
+                                    </label>
+                                    {{ form.project_name(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder="e.g., Annual Report Translation") }}
+                                    {% if form.project_name.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        {% for error in form.project_name.errors %}
+                                        <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.client_name.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Client Name *
+                                    </label>
+                                    {{ form.client_name(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder="e.g., Acme Corporation") }}
+                                    {% if form.client_name.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        {% for error in form.client_name.errors %}
+                                        <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.source_lang.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Source Language *
+                                    </label>
+                                    {{ form.source_lang(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder="e.g., EN") }}
+                                    <p class="mt-1 text-sm text-gray-500">Language code (e.g., EN, FR, DE, ES)</p>
+                                    {% if form.source_lang.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        {% for error in form.source_lang.errors %}
+                                        <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.target_lang.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Target Language *
+                                    </label>
+                                    {{ form.target_lang(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent", placeholder="e.g., ES") }}
+                                    <p class="mt-1 text-sm text-gray-500">Language code (e.g., EN, FR, DE, ES)</p>
+                                    {% if form.target_lang.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        {% for error in form.target_lang.errors %}
+                                        <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.content_type_selection.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Content Type *
+                                    </label>
+                                    {{ form.content_type_selection(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent") }}
+                                    {% if form.content_type_selection.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        {% for error in form.content_type_selection.errors %}
+                                        <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.desired_deadline.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Desired Deadline *
+                                    </label>
+                                    {{ form.desired_deadline(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent", type="date") }}
+                                    {% if form.desired_deadline.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        {% for error in form.desired_deadline.errors %}
+                                        <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="{{ form.selected_linguist_id_for_planning.id }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Preferred Linguist (Optional)
+                                </label>
+                                {{ form.selected_linguist_id_for_planning(class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent") }}
+                                <p class="mt-1 text-sm text-gray-500">Select a preferred linguist from your organization's profiles</p>
+                                {% if form.selected_linguist_id_for_planning.errors %}
+                                <div class="mt-1 text-sm text-red-600">
+                                    {% for error in form.selected_linguist_id_for_planning.errors %}
+                                    <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex justify-between pt-6">
+                                <a href="/dashboard" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg">
+                                    Cancel
+                                </a>
+                                {{ form.submit(class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg") }}
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Information Box -->
+                    <div class="mt-8 bg-blue-50 p-6 rounded-lg">
+                        <h3 class="text-lg font-medium text-blue-900 mb-4">How It Works</h3>
+                        <div class="space-y-3 text-sm text-blue-800">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                                    <span class="text-blue-800 text-xs font-bold">1</span>
+                                </div>
+                                <p>Submit this form to create a project analysis request in the Cloud Dashboard.</p>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                                    <span class="text-blue-800 text-xs font-bold">2</span>
+                                </div>
+                                <p>You'll receive a unique Local Analysis Request ID for this project.</p>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                                    <span class="text-blue-800 text-xs font-bold">3</span>
+                                </div>
+                                <p>Use your GPO Local Brain to analyze the document with this ID.</p>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                                    <span class="text-blue-800 text-xs font-bold">4</span>
+                                </div>
+                                <p>View the detailed "God PM Blueprint" results in the Cloud Dashboard.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-12">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        © 2024 GPO Project Orchestrator. All rights reserved.
+                    </div>
+                    <div class="flex space-x-6">
+                        <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Privacy Policy</a>
+                        <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Terms of Service</a>
+                        <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Support</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Simple JavaScript to ensure the page stays visible
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('New Project Request: Page loaded successfully');
+            
+            // Ensure the form container stays visible
+            const formContainer = document.getElementById('new-project-form');
+            if (formContainer) {
+                formContainer.style.display = 'block';
+                formContainer.style.visibility = 'visible';
+                formContainer.style.opacity = '1';
+            }
+            
+            // Add some basic form validation
+            const form = document.getElementById('project-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submitted');
+                });
+            }
+        });
+        
+        // Prevent any content from being hidden
+        window.addEventListener('error', function(e) {
+            console.log('JavaScript error detected:', e.error);
+        });
+    </script>
+</body>
+</html> 
