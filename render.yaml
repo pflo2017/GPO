@@ -6,7 +6,7 @@ services:
     buildCommand: |
       pip install -r gpo_product/requirements.txt
     startCommand: |
-      gunicorn -w 4 -b 0.0.0.0:10000 gpo_product.app:app
+      cd gpo_product && gunicorn -w 4 -b 0.0.0.0:10000 app:app
     envVars:
       - key: FLASK_ENV
         value: production
