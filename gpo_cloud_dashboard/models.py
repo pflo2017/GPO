@@ -1,11 +1,8 @@
 import uuid
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-
-# Initialize SQLAlchemy
-db = SQLAlchemy()
+from gpo_product.database import db
 
 class Tenant(db.Model):
     """Tenant model for multi-tenancy"""
