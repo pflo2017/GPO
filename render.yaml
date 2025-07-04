@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: gpo-cloud-gpo
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r gpo_product/requirements.txt
+    startCommand: |
+      gunicorn -w 4 -b 0.0.0.0:10000 gpo_product.app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SUPABASE_HOST
+        sync: false
+      - key: SUPABASE_DB
+        sync: false
+      - key: SUPABASE_USER
+        sync: false
+      - key: SUPABASE_PASSWORD
+        sync: false
+      - key: SUPABASE_PORT
+        value: 5432
+    autoDeploy: true
+    healthCheckPath: /
+    
+databases:
+  - name: gpo-cloud-db
+    plan: free
+    postgresMajorVersion: 15 

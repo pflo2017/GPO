@@ -130,4 +130,5 @@ dummy_docs/*
 !dummy_docs/.gitkeep
 uploads/
 temp/
-logs/ 
+logs/ .env
+gpo_product/.env
