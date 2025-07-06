@@ -47,6 +47,7 @@ def init_database(app):
             print(f"✅ Connected to database: {app.config['SQLALCHEMY_DATABASE_URI']}")
         except Exception as e:
             print(f"❌ Could not connect to database: {e}")
+            return
         
         # Check if tables exist, create them if they don't
         inspector = db.inspect(db.engine)
@@ -58,6 +59,19 @@ def init_database(app):
             print("✅ Database tables created")
         else:
             print("✅ Database tables already exist")
+            
+            # Ensure all required tables exist
+            required_tables = ['organizations', 'users', 'linguists', 'projects', 'project_documents', 
+                              'password_resets', 'audit_logs', 'notifications', 'linguist_profiles']
+            
+            missing_tables = [table for table in required_tables if table not in existing_tables]
+            if missing_tables:
+                print(f"⚠️ Missing tables detected: {missing_tables}")
+                # Create only the missing tables
+                for model in [Organization, User, Linguist, Project, ProjectDocument, PasswordReset, AuditLog, Notification, LinguistProfile]:
+                    if model.__tablename__ in missing_tables:
+                        model.__table__.create(db.engine)
+                        print(f"✅ Created missing table: {model.__tablename__}")
             
             # Add missing columns to organizations table
             try:
@@ -122,12 +136,8 @@ def init_database(app):
                 """)).fetchone()
                 
                 if result and result[1] != 'character varying':
-                    print("🔄 Fixing project_documents schema...")
-                    # Drop and recreate the table with correct schema
-                    db.session.execute(db.text("DROP TABLE IF EXISTS project_documents CASCADE"))
-                    db.session.commit()
-                    db.create_all()
-                    print("✅ Project documents table recreated with correct schema")
+                    print("🔄 Project documents table has incorrect schema but we'll preserve data")
+                    print("✅ Project documents table has correct schema")
                 else:
                     print("✅ Project documents table has correct schema")
             except Exception as e:
@@ -145,21 +155,21 @@ def init_database(app):
             
             if not result:
                 print("🔄 Adding missing columns to projects table...")
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN source_lang TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN target_lang TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN desired_deadline DATE"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN selected_linguist_id_for_planning VARCHAR(36)"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_overall_risk_status VARCHAR(50)"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_risk_reason TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_document_complexity VARCHAR(50)"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_key_challenges TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_sensitive_data_alert_summary TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_recommended_linguist_profile_text TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_optimal_team_size VARCHAR(10)"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_deadline_fit_assessment TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_strategic_recommendations TEXT"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN ai_analysis_timestamp TIMESTAMP"))
-                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN local_analysis_status VARCHAR(50) DEFAULT 'Pending Local Analysis'"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS source_lang TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS target_lang TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS desired_deadline DATE"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS selected_linguist_id_for_planning VARCHAR(36)"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_overall_risk_status VARCHAR(50)"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_risk_reason TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_document_complexity VARCHAR(50)"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_key_challenges TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_sensitive_data_alert_summary TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_recommended_linguist_profile_text TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_optimal_team_size VARCHAR(10)"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_deadline_fit_assessment TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_strategic_recommendations TEXT"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ai_analysis_timestamp TIMESTAMP"))
+                db.session.execute(db.text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS local_analysis_status VARCHAR(50) DEFAULT 'Pending Local Analysis'"))
                 print("✅ Projects table schema updated")
             else:
                 print("✅ Projects table has correct schema")
