@@ -84,7 +84,7 @@ def login():
         
         user = UserModel.query.filter_by(email=email).first()
         
-        if user and check_password_hash(user.password_hash, password):
+        if user and user.password_hash and check_password_hash(user.password_hash, password):
             login_user(User(
                 id=user.id,
                 email=user.email,
