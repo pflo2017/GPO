@@ -1,1 +1,1 @@
-web: cd gpo_product && gunicorn wsgi:app 
+web: gunicorn wsgi:app 
